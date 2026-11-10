@@ -48,6 +48,17 @@ textarea.code{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-
 .msgs li.e{background:#fbeceb;color:var(--err)}
 .msgs li.w{background:#fff4e0;color:var(--warn)}
 .msgs li.o{background:#e8f4ec;color:var(--ok)}
+.hist{width:100%;border-collapse:collapse;font-size:13px}
+.hist th,.hist td{border-bottom:1px solid #e3e3e3;padding:8px 6px;text-align:left;vertical-align:middle}
+.hist th{font-size:12px;color:#555;font-weight:600}
+.hist td.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600}
+.hist select{border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px;background:#fff}
+.hist .acts{display:flex;gap:6px;flex-wrap:wrap}
+.hist .btn{padding:5px 10px;font-size:12px}
+.btn.danger{background:#fff;color:var(--err);border-color:var(--err)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.st-draft{background:#eee;color:#555}.st-submitted{background:#fff4e0;color:var(--warn)}.st-feedback{background:#fbeceb;color:var(--err)}.st-approved{background:#e8f4ec;color:var(--ok)}
+.cur{font-size:12px;color:var(--muted);margin-top:8px}
 .split{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
 .split .panel{position:sticky;top:12px}
 .preview-wrap{overflow:auto}
@@ -152,6 +163,7 @@ pre.prompt{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);
     <button role="tab" data-tab="t1" aria-selected="true">1 · Make prompt</button>
     <button role="tab" data-tab="t2" aria-selected="false">2 · Preview &amp; print</button>
     <button role="tab" data-tab="t3" aria-selected="false">3 · Revise</button>
+    <button role="tab" data-tab="t5" aria-selected="false">My worksheets</button>
     <button role="tab" data-tab="t4" aria-selected="false">How it works</button>
   </div>
 
@@ -166,8 +178,16 @@ pre.prompt{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);
         <label class="f wide">Video name<input id="video" value="Math Chapter 7 Video 1"></label>
         <label class="f wide">Chapter title (Bangla)<input id="chapTitle" value="ব্যবহারিক জ্যামিতি"></label>
         <label class="f wide">Worksheet title (Bangla, optional)<input id="wsTitle" placeholder="Leave blank to let Claude suggest one"></label>
-        <label class="f full">Final video script (Bangla / English)<textarea id="script" rows="12" placeholder="Paste the full final script of this video here…"></textarea></label>
+        <label class="f full">Final video script (Bangla / English)<textarea id="script" rows="12" placeholder="Paste the full final script here, or load a file below…"></textarea></label>
       </div>
+      <div class="row">
+        <label class="btn ghost" style="display:inline-block">Load script file (.md / .txt / .docx)<input type="file" id="scriptFile" accept=".md,.txt,.docx,text/plain,text/markdown" style="display:none"></label>
+        <span class="note" id="fileNote">Best: in Google Docs choose <b>File → Download → Markdown (.md)</b> — equations stay correct.</span>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="optPdf"> I will also attach the script as a <b>PDF</b> in the Claude chat (so Claude can see the figures and practice problems)</label>
+      </div>
+      <p class="note" style="margin:4px 0 0 24px">Google Docs: File → Download → PDF. In Claude, attach the PDF and paste the prompt in the same message.</p>
       <div class="row">
         <label class="check"><input type="checkbox" id="optExample" checked> Include a worked example box (উদাহরণ)</label>
       </div>
@@ -228,13 +248,28 @@ pre.prompt{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);
     </div>
   </section>
 
+  <!-- HISTORY -->
+  <section id="t5" class="hidden">
+    <div class="panel">
+      <h2>My worksheets</h2>
+      <p class="help">Every worksheet you preview is saved here automatically (on this computer, in this browser). Open one to continue, change its status, or go back to an earlier version.</p>
+      <div id="histList"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn" id="backup">Download backup</button>
+        <label class="btn ghost" style="display:inline-block">Restore from backup<input type="file" id="restore" accept=".json,application/json" style="display:none"></label>
+        <span class="flash" id="flash5"></span>
+      </div>
+      <p class="note">History is stored only in this browser. It is lost if you clear browser data or use another computer — download a backup every week, and always keep each worksheet's JSON file.</p>
+    </div>
+  </section>
+
   <!-- HOW -->
   <section id="t4" class="hidden">
     <div class="panel">
       <h2>Workflow</h2>
       <ol style="margin:6px 0 0 18px;padding:0;line-height:1.9">
-        <li><b>Make prompt:</b> enter the details, paste the final script, click <i>Copy prompt</i>.</li>
-        <li>Open a <b>new chat</b> in Claude and paste. Claude replies with the worksheet as JSON.</li>
+        <li><b>Make prompt:</b> enter the details, load the final script (Google Docs → File → Download → Markdown) or paste it, click <i>Copy prompt</i>.</li>
+        <li>Open a <b>new chat</b> in Claude. If the script has figures, attach the script PDF (Google Docs → File → Download → PDF). Paste the prompt and send. Claude replies with the worksheet as JSON.</li>
         <li><b>Preview:</b> paste the reply in step 2. Fix any red errors (ask Claude to fix them).</li>
         <li><b>Check</b> every question and answer yourself: is the maths right, does it match the video, is the Bangla clear?</li>
         <li><b>Revise:</b> use step 3 in the same chat until you are happy.</li>
@@ -264,7 +299,8 @@ const store = {
 document.querySelectorAll(".steps button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
 function showTab(id){
   document.querySelectorAll(".steps button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab===id));
-  ["t1","t2","t3","t4"].forEach(t => $("#"+t).classList.toggle("hidden", t!==id));
+  if (id === "t5") renderHistory();
+  ["t1","t2","t3","t4","t5"].forEach(t => $("#"+t).classList.toggle("hidden", t!==id));
   store.set("tab", id);
 }
 
@@ -292,6 +328,8 @@ function wsId(){ const c = parseInt($("#chapNo").value)||0, v = parseInt($("#vid
 function buildPrompt(){
   const id = wsId(), c = parseInt($("#chapNo").value)||0, v = parseInt($("#vidNo").value)||0;
   const ex = $("#optExample").checked;
+  const pdf = $("#optPdf").checked;
+  const scr = $("#script").value.trim();
   const sample = JSON.parse(JSON.stringify(SAMPLE));
   if (!ex) sample.worked_example = null;
   return `You are an experienced Bangladeshi secondary-school mathematics teacher (NCTB curriculum, Grade 9–10, Bangla version). Create ONE printable student worksheet that accompanies the video lesson whose final script is given below. Students watch the video, then complete the worksheet in about 30 minutes.
@@ -331,21 +369,50 @@ ${JSON.stringify(sample, null, 2)}
 ## Revisions
 When I later ask for changes, reply again with the COMPLETE updated JSON (same schema, keep all unchanged items and IDs exactly the same). If you need to tell me something, put it in "self_check".
 
+## About the script
+- The script is usually a table: scene no. | on-screen content (দৃশ্য বিবরণ) | voice-over (ভয়েস ওভার) | time | comment. Take the maths from the on-screen content and the voice-over. Ignore animation / editing directions (e.g. "Highlight…", "animation আসবে", "return to the original diagram") and production comments.
+- Equations may be written in LaTeX (e.g. $\\frac{1}{2}$) — read them, but write your output with Unicode symbols only.
+${pdf ? "- The same script is ATTACHED as a PDF to this message, including all figures. Use the PDF to see the figures, worked problems and practice problems (নিজে করার পালা). If the PDF and the text below differ, follow the PDF." : "- Image placeholders such as ![][image3] are figures you cannot see. Do not write questions that depend on those figures; use the numbers and facts given in the text instead."}
+- When a question needs a figure, still describe it fully in "figure_bn" (labels, lengths, angles) so the creator can draw it.
+
 ## Final video script
-"""
-${$("#script").value.trim() || "(PASTE THE FINAL SCRIPT HERE)"}
-"""`;
+${scr ? `"""\n${scr}\n"""` : "(See the attached PDF.)"}`;
 }
 
 $("#copyPrompt").addEventListener("click", () => {
   const m = [];
-  if (!$("#script").value.trim()) m.push(["e","Paste the final video script first."]);
+  if (!$("#script").value.trim() && !$("#optPdf").checked) m.push(["e","Paste or load the final video script first (or tick the PDF option and attach the PDF in Claude)."]);
+  if (!$("#script").value.trim() && $("#optPdf").checked) m.push(["w","Only the PDF will be used — remember to attach it in Claude."]);
+  if (/!\[\]\[image\d+\]/.test($("#script").value) && !$("#optPdf").checked) m.push(["w","This script has figures (images). Tick the PDF option and attach the PDF so Claude can see them."]);
   if (!$("#chapTitle").value.trim()) m.push(["w","Chapter title is empty."]);
   if (!$("#video").value.trim()) m.push(["w","Video name is empty."]);
   showMsgs("#msgs1", m);
   if (m.some(x=>x[0]==="e")) return;
   const p = buildPrompt(); $("#promptView").textContent = p;
   copyText(p, $("#flash1"));
+});
+function loadScript(src){
+  return new Promise((ok, bad) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => bad(new Error("could not load " + src)); document.head.appendChild(s); });
+}
+$("#scriptFile").addEventListener("change", async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const note = $("#fileNote");
+  try {
+    let t;
+    if (/\.docx$/i.test(f.name)){
+      if (!window.mammoth) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
+      const r = await window.mammoth.extractRawText({arrayBuffer: await f.arrayBuffer()});
+      t = r.value;
+      note.innerHTML = `Loaded <b>${esc(f.name)}</b>. Word equations may be missing — check them, or use Markdown (.md) / PDF instead.`;
+    } else {
+      t = await f.text();
+      note.innerHTML = `Loaded <b>${esc(f.name)}</b> (${t.length.toLocaleString()} characters).`;
+    }
+    t = t.replace(/^\s*(\|\s*)+\|?\s*$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+    $("#script").value = t; store.set("script", t);
+    if (/!\[\]\[image\d+\]/.test(t)) { $("#optPdf").checked = true; note.innerHTML += " This script has figures — the PDF option is now ticked; attach the PDF in Claude."; }
+  } catch(err){ note.innerHTML = `<span style="color:var(--err)">Could not read the file (${esc(err.message)}). Copy and paste the text instead.</span>`; }
+  ev.target.value = "";
 });
 $("#togglePrompt").addEventListener("click", () => {
   const v = $("#promptView"); v.textContent = buildPrompt(); v.classList.toggle("hidden");
@@ -531,6 +598,110 @@ function renderKey(d){
   return frame(`JICA Grassroots · গণিত · Worksheet ${esc(id)} · Answer key`, `${esc(id)} · উত্তরমালা`, h, false);
 }
 
+/* ---------- HISTORY (this browser only) ---------- */
+const STATUS = [["draft","Draft"],["submitted","Submitted to BUET"],["feedback","BUET feedback — revising"],["approved","BUET approved (final)"]];
+const MAXV = 6;
+function histLoad(){ try { return JSON.parse(store.get("history") || "[]"); } catch(e){ return []; } }
+function histSave(h){
+  try { localStorage.setItem("wsm:history", JSON.stringify(h)); return true; }
+  catch(e){ return false; }
+}
+function stamp(){ return new Date().toISOString(); }
+function fmtDate(s){ try { const d = new Date(s); return d.toLocaleDateString(undefined,{day:"numeric",month:"short"}) + " " + d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); } catch(e){ return s; } }
+function inputsNow(){ return {chapNo:$("#chapNo").value, vidNo:$("#vidNo").value, video:$("#video").value, chapTitle:$("#chapTitle").value, wsTitle:$("#wsTitle").value, script:$("#script").value, optPdf:$("#optPdf").checked, optExample:$("#optExample").checked}; }
+function histUpsert(id, fn){
+  const h = histLoad();
+  let e = h.find(x => x.id === id);
+  if (!e){ e = {id, title:"", status:"draft", created:stamp(), updated:stamp(), versions:[], inputs:null}; h.push(e); }
+  fn(e);
+  e.updated = stamp();
+  let ok = histSave(h);
+  while (!ok){ // storage full: trim oldest versions everywhere
+    const victim = h.filter(x => x.versions.length > 1).sort((a,b)=>a.updated.localeCompare(b.updated))[0];
+    if (!victim) break;
+    victim.versions.shift(); ok = histSave(h);
+  }
+  return ok ? e : null;
+}
+function histAddVersion(d){
+  const id = d.meta && d.meta.worksheet_id; if (!id) return null;
+  const json = JSON.stringify(d);
+  return histUpsert(id, e => {
+    e.title = (d.meta.title_bn || e.title || "");
+    e.video = d.meta.video || e.video || "";
+    const last = e.versions[e.versions.length-1];
+    if (!last || last.json !== json){ e.versions.push({at:stamp(), json}); if (e.versions.length > MAXV) e.versions.shift(); }
+  });
+}
+$("#copyPrompt").addEventListener("click", () => {
+  if (!$("#script").value.trim() && !$("#optPdf").checked) return;
+  histUpsert(wsId(), e => { e.inputs = inputsNow(); if (!e.title && $("#wsTitle").value.trim()) e.title = $("#wsTitle").value.trim(); if (!e.video) e.video = $("#video").value.trim(); });
+});
+function openEntry(id, vi){
+  const e = histLoad().find(x => x.id === id); if (!e) return;
+  if (e.inputs){ ["chapNo","vidNo","video","chapTitle","wsTitle","script"].forEach(k => { if (e.inputs[k] !== undefined){ $("#"+k).value = e.inputs[k]; store.set(k, e.inputs[k]); } }); $("#optPdf").checked = !!e.inputs.optPdf; $("#optExample").checked = e.inputs.optExample !== false; }
+  if (e.versions.length){
+    const v = e.versions[vi ?? e.versions.length-1];
+    $("#jsonIn").value = JSON.stringify(JSON.parse(v.json), null, 2); store.set("jsonIn", $("#jsonIn").value);
+    showTab("t2"); render();
+  } else showTab("t1");
+}
+let pendingDel = null;
+function renderHistory(){
+  const h = histLoad().sort((a,b) => b.updated.localeCompare(a.updated));
+  if (!h.length){ $("#histList").innerHTML = `<p class="note" style="padding:20px 0">Nothing yet. Worksheets appear here after you copy a prompt or preview a worksheet.</p>`; return; }
+  $("#histList").innerHTML = `<table class="hist"><thead><tr><th>ID</th><th>Title / video</th><th>Status</th><th>Last change</th><th>Versions</th><th></th></tr></thead><tbody>${h.map(e => `
+    <tr>
+      <td class="mono">${esc(e.id)}</td>
+      <td>${esc(e.title || "—")}<div class="note">${esc(e.video || "")}</div></td>
+      <td><select data-st="${esc(e.id)}">${STATUS.map(([k,l]) => `<option value="${k}" ${e.status===k?"selected":""}>${l}</option>`).join("")}</select></td>
+      <td>${fmtDate(e.updated)}</td>
+      <td>${e.versions.length ? `<select data-ver="${esc(e.id)}">${e.versions.map((v,i)=>`<option value="${i}" ${i===e.versions.length-1?"selected":""}>v${i+1} · ${fmtDate(v.at)}</option>`).join("")}</select>` : `<span class="note">prompt only</span>`}</td>
+      <td><div class="acts"><button class="btn" data-open="${esc(e.id)}">Open</button><button class="btn danger" data-del="${esc(e.id)}">${pendingDel===e.id?"Click again to delete":"Delete"}</button></div></td>
+    </tr>`).join("")}</tbody></table>`;
+  $("#histList").querySelectorAll("[data-open]").forEach(b => b.onclick = () => { const id = b.dataset.open; const sel = $("#histList").querySelector(`[data-ver="${CSS.escape(id)}"]`); openEntry(id, sel ? +sel.value : undefined); });
+  $("#histList").querySelectorAll("[data-st]").forEach(s => s.onchange = () => { const id = s.dataset.st; const h2 = histLoad(); const e = h2.find(x=>x.id===id); if (e){ e.status = s.value; histSave(h2); } });
+  $("#histList").querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    const id = b.dataset.del;
+    if (pendingDel !== id){ pendingDel = id; renderHistory(); setTimeout(()=>{ if (pendingDel===id){ pendingDel=null; renderHistory(); } }, 4000); return; }
+    pendingDel = null; histSave(histLoad().filter(x => x.id !== id)); renderHistory();
+  });
+}
+function saveFile(name, text){
+  try {
+    const url = URL.createObjectURL(new Blob([text], {type:"application/json"}));
+    const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000); return true;
+  } catch(e){ return false; }
+}
+$("#backup").addEventListener("click", () => {
+  const h = histLoad();
+  const d = new Date(); const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+  saveFile(`worksheet-backup-${ds}.json`, JSON.stringify({kind:"worksheet-maker-backup", saved:stamp(), history:h}, null, 1));
+  $("#flash5").style.color=""; $("#flash5").textContent = `Backup of ${h.length} worksheet(s) downloaded.`;
+});
+$("#restore").addEventListener("change", async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try {
+    const b = JSON.parse(await f.text());
+    if (b.kind !== "worksheet-maker-backup" || !Array.isArray(b.history)) throw new Error("not a Worksheet Maker backup file");
+    const h = histLoad(); let added = 0, merged = 0;
+    b.history.forEach(src => {
+      const e = h.find(x => x.id === src.id);
+      if (!e){ h.push(src); added++; return; }
+      const have = new Set(e.versions.map(v => v.json));
+      src.versions.forEach(v => { if (!have.has(v.json)) e.versions.push(v); });
+      e.versions.sort((a,b)=>a.at.localeCompare(b.at)); e.versions = e.versions.slice(-MAXV);
+      if (src.updated > e.updated){ e.status = src.status; e.title = src.title || e.title; e.inputs = src.inputs || e.inputs; e.updated = src.updated; }
+      merged++;
+    });
+    if (!histSave(h)) throw new Error("browser storage is full");
+    $("#flash5").style.color=""; $("#flash5").textContent = `Restored: ${added} new, ${merged} merged.`;
+    renderHistory();
+  } catch(err){ $("#flash5").style.color="var(--err)"; $("#flash5").textContent = "Could not restore: " + err.message; }
+  ev.target.value = "";
+});
+
 let current = null;
 function render(){
   const raw = $("#jsonIn").value;
@@ -540,8 +711,13 @@ function render(){
   const {e,w} = validate(d);
   const list = e.map(x=>["e",x]).concat(w.map(x=>["w",x]));
   if (!e.length) list.unshift(["o", w.length ? "Structure OK — check the warnings." : "Structure OK. Now check the content yourself."]);
-  showMsgs("#msgs2", list);
   current = d;
+  const isSample = JSON.stringify(d) === JSON.stringify(SAMPLE);
+  if (!isSample && d.meta && d.meta.worksheet_id){
+    const ent = histAddVersion(d);
+    list.push(ent ? ["o", `Saved in My worksheets: ${d.meta.worksheet_id} · version ${ent.versions.length}`] : ["w","Could not save to My worksheets (browser storage blocked or full) — use Save JSON."]);
+  }
+  showMsgs("#msgs2", list);
   const html = renderSheet(d) + ($("#optKey").checked ? renderKey(d) : "");
   $("#preview").innerHTML = html; $("#printArea").innerHTML = html;
 }
