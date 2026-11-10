@@ -6,6 +6,9 @@
 <title>Worksheet Maker — JICA Grassroots Math</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <style>
 :root{
   --ink:#1f1f1f; --muted:#6b6b6b; --line:#cfcfcf; --bg:#f4f3ef; --panel:#ffffff;
@@ -117,6 +120,7 @@ pre.prompt{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);
 .area{border:1.4px solid #222;position:relative;margin-top:1.8mm}
 .area .tag{position:absolute;top:.6mm;left:1.6mm;font-size:6.5pt;color:#777;font-family:Arial,sans-serif}
 .area.work{border-style:dashed;border-color:#aaa}
+.sheet .katex{font-size:1.12em}
 .figwrap{text-align:center;margin:1.5mm 0 1mm}
 .figwrap svg{display:inline-block;max-width:100%}
 .stem{border:1px solid #888;background:#fbfbf7;padding:2.5mm 3.5mm;margin-bottom:3mm}
@@ -381,7 +385,7 @@ function buildPrompt(){
 
 ## Content rules
 1. Use ONLY concepts, methods, notation and terminology that appear in the script. Do not introduce new methods. Difficulty: Grade 9–10, rural secondary schools — clear and achievable, from easy (MCQ) to harder (CQ ঘ).
-2. All student-facing text in clear standard Bangla (fields ending in _bn). Write all numbers in English digits (e.g. 4.8, 50°). Use Unicode maths symbols (∠ △ ° ² ³ √ π × ÷ − ≤ ≥ ≠ ∥ ⊥), never LaTeX. Write fractions as a/b.
+2. All student-facing text in clear standard Bangla (fields ending in _bn). Write all numbers in English digits (e.g. 4.8, 50°). Simple symbols as Unicode (∠ △ ° ² × ÷ − ≤ ≥ ≠ ∥ ⊥ π). For fractions, square roots of expressions, powers and longer formulas use LaTeX inside single dollar signs, e.g. "$\\frac{1}{2} \\times 12 \\times 5$", "$\\sqrt{a^2+b^2}$" — the website renders it as proper maths. In JSON, every backslash must be doubled (\\\\frac). Never use LaTeX in "answer", "accept" or "tolerance" (plain numbers / plain text only) and never in figure labels. Write a fraction answer as a decimal number if it is exact (0.5), otherwise use a "text" blank such as "3/7".
 3. Every numeric answer must be checked by calculation. For answers measured from a drawing, set a tolerance (e.g. 0.2); otherwise tolerance 0.
 4. Use figures where the topic needs them (geometry), following the Figures section below — the website draws them. Do not use figures that the schema cannot draw (e.g. photos, 3-D objects, graphs of functions); rewrite such questions in words.
 5. Explanations / solutions / model answers are short and are for the teacher's answer key.
@@ -401,7 +405,7 @@ When I later ask for changes, reply again with the COMPLETE updated JSON (same s
 
 ## About the script
 - The script is usually a table: scene no. | on-screen content (দৃশ্য বিবরণ) | voice-over (ভয়েস ওভার) | time | comment. Take the maths from the on-screen content and the voice-over. Ignore animation / editing directions (e.g. "Highlight…", "animation আসবে", "return to the original diagram") and production comments.
-- Equations may be written in LaTeX (e.g. $\\frac{1}{2}$) — read them, but write your output with Unicode symbols only.
+- Equations may be written in LaTeX (e.g. $\\frac{1}{2}$) — read them; in your output use LaTeX in $...$ as described in rule 2.
 ${pdf ? "- The same script is ATTACHED as a PDF to this message, including all figures. Use the PDF to see the figures, worked problems and practice problems (নিজে করার পালা). If the PDF and the text below differ, follow the PDF." : "- Image placeholders such as ![][image3] are figures you cannot see. Do not write questions that depend on those figures; use the numbers and facts given in the text instead."}
 - Figures you see in the script may be redrawn with the figure schema (same point names and given values).
 
@@ -563,7 +567,9 @@ function validate(d){
       if (bad.size) e.push(`${q.id}: figure uses undefined point(s) ${[...bad].join(", ")}`);
     } else if (q.figure_bn) w.push(`${q.id}: needs a figure but has no "figure" drawing — use "Ask Claude to draw figures" in step 3`);
   });
-  const all = JSON.stringify(d); if (/\\(frac|sqrt|angle|times|circ)/.test(all)) w.push("LaTeX found — ask Claude to use Unicode symbols");
+  const odd = []; const walk = (o, path) => { if (typeof o === "string"){ if (((o.match(/(?<!\\)\$/g)||[]).length % 2) && /_bn$|prefix|suffix/.test(path)) odd.push(path); } else if (o && typeof o === "object") Object.entries(o).forEach(([k,v]) => walk(v, k)); };
+  walk(d, ""); if (odd.length) w.push(`Unbalanced $ in maths text (${odd.length} place(s)) — a formula may not display correctly`);
+  [...(d.short||[]),...((d.cq&&d.cq.parts)||[]).map(p=>p.response||{})].forEach(q => (q.blanks||[]).forEach(b => { if (/\\|\$/.test(String(b.answer))) e.push(`${b.id}: answer must not contain LaTeX`); }));
   return {e, w};
 }
 function showMsgs(sel, list){
@@ -824,6 +830,10 @@ $("#restore").addEventListener("change", async ev => {
   ev.target.value = "";
 });
 
+function typesetMath(){
+  if (!window.renderMathInElement){ if (!typesetMath.tries || typesetMath.tries < 20){ typesetMath.tries = (typesetMath.tries||0)+1; setTimeout(typesetMath, 300); } return; }
+  ["#preview","#printArea"].forEach(s => { try { renderMathInElement($(s), {delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}], throwOnError:false}); } catch(e){} });
+}
 let current = null;
 function render(){
   const raw = $("#jsonIn").value;
@@ -842,6 +852,7 @@ function render(){
   showMsgs("#msgs2", list);
   const html = renderSheet(d) + ($("#optKey").checked ? renderKey(d) : "");
   $("#preview").innerHTML = html; $("#printArea").innerHTML = html;
+  typesetMath();
 }
 $("#render").addEventListener("click", render);
 $("#optKey").addEventListener("change", () => { if (current) render(); });
