@@ -120,7 +120,8 @@ pre.prompt{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);
 .area{border:1.4px solid #222;position:relative;margin-top:1.8mm}
 .area .tag{position:absolute;top:.6mm;left:1.6mm;font-size:6.5pt;color:#777;font-family:Arial,sans-serif}
 .area.work{border-style:dashed;border-color:#aaa}
-.sheet .katex{font-size:1.12em}
+.sheet .katex{font-size:1.18em;display:inline-block;padding:.28em 0;vertical-align:middle}
+.sheet .katex-display{margin:.3em 0}
 .figwrap{text-align:center;margin:1.5mm 0 1mm}
 .figwrap svg{display:inline-block;max-width:100%}
 .stem{border:1px solid #888;background:#fbfbf7;padding:2.5mm 3.5mm;margin-bottom:3mm}
@@ -851,7 +852,8 @@ function render(){
   }
   showMsgs("#msgs2", list);
   const html = renderSheet(d) + ($("#optKey").checked ? renderKey(d) : "");
-  $("#preview").innerHTML = html; $("#printArea").innerHTML = html;
+  const mathHtml = html.replace(/(^|[^\\$])\$(?!\$)([^$\n]+?)\$/g, (m, p, a) => `${p}$\\displaystyle ${a}$`);
+  $("#preview").innerHTML = mathHtml; $("#printArea").innerHTML = mathHtml;
   typesetMath();
 }
 $("#render").addEventListener("click", render);
