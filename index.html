@@ -69,6 +69,9 @@ textarea.code{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-
 pre.prompt{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);border-radius:6px;padding:10px;max-height:260px;overflow:auto;font-size:11.5px;margin:10px 0 0}
 
 /* ---------- worksheet ---------- */
+@font-face{font-family:"WSDigits";src:url(https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/fonts/KaTeX_Main-Regular.woff2) format("woff2");font-weight:400;unicode-range:U+0021-007E,U+00B0,U+00D7,U+00F7,U+2212,U+2220,U+25B3,U+2264,U+2265,U+2260,U+2225,U+22A5,U+221A}
+@font-face{font-family:"WSDigits";src:url(https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/fonts/KaTeX_Main-Bold.woff2) format("woff2");font-weight:600 700;unicode-range:U+0021-007E,U+00B0,U+00D7,U+00F7,U+2212,U+2220,U+25B3,U+2264,U+2265,U+2260,U+2225,U+22A5,U+221A}
+.sheet{font-family:"WSDigits",var(--font)}
 .sheet{background:#fff;width:210mm;margin:0 auto 16px;padding:0;box-shadow:0 1px 6px rgba(0,0,0,.12);position:relative;color:#111;font-size:10.5pt;line-height:1.5}
 .sheet .inner{padding:12mm 14mm 12mm}
 .ws-table{width:100%;border-collapse:collapse}
@@ -120,7 +123,7 @@ pre.prompt{white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);
 .area{border:1.4px solid #222;position:relative;margin-top:1.8mm}
 .area .tag{position:absolute;top:.6mm;left:1.6mm;font-size:6.5pt;color:#777;font-family:Arial,sans-serif}
 .area.work{border-style:dashed;border-color:#aaa}
-.sheet .katex{font-size:1.18em;display:inline-block;padding:.28em 0;vertical-align:middle}
+.sheet .katex{font-size:1.1em;display:inline-block;padding:.28em 0;vertical-align:middle}
 .sheet .katex-display{margin:.3em 0}
 .figwrap{text-align:center;margin:1.5mm 0 1mm}
 .figwrap svg{display:inline-block;max-width:100%}
@@ -644,7 +647,7 @@ function figSvg(f){
     let vx = p[0]-cx, vy = p[1]-cy; const L = Math.hypot(vx,vy); if (L < .01){ vx = 0; vy = -1; } else { vx/=L; vy/=L; }
     g += t(p[0]+vx*3.4, p[1]+vy*3.4, n, "middle", 3.6);
   });
-  return `<svg class="figsvg" viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" width="${W.toFixed(1)}mm" height="${H.toFixed(1)}mm" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans Bengali, Nirmala UI, sans-serif">${g}</svg>`;
+  return `<svg class="figsvg" viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" width="${W.toFixed(1)}mm" height="${H.toFixed(1)}mm" xmlns="http://www.w3.org/2000/svg" font-family="WSDigits, Noto Sans Bengali, Nirmala UI, sans-serif">${g}</svg>`;
 }
 function fig(q){
   if (q.figure && q.figure.points) return `<div class="figwrap">${figSvg(q.figure)}</div>`;
